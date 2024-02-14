@@ -145,6 +145,41 @@ export const getProfile = (req, res) => {
   }
 }
 
+// ===== 換大頭貼
+export const avatar = async (req, res) => {
+  try {
+    /*
+    console.log(req.file) -> 得到以下物件
+    {
+      fieldname: 'image',
+      originalname: '0104.jpg',
+      encoding: '7bit',
+      mimetype: 'image/jpeg',
+      path: 'https://res.cloudinary.com/xxx.jpg',
+      size: 46736,
+      filename: 'wfsjhnj7mhucazq9rcpj'
+    }
+    */
+    // 把大題貼改成這次檔案上傳的路徑
+    req.user.avatar = req.file.path // 多檔上傳 req.files
+    // 保存
+    await req.user.save()
+    // 回覆成功
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: req.user.avatar
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '伺服器錯誤'
+    })
+  }
+}
+
+// 20240117 -------------------------------------------------------------
 // export const editCart = async (req, res) => {
 //   try {
 //     // 檢查商品 id 格式對不對

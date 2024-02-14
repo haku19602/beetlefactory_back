@@ -18,6 +18,17 @@ const cartSchema = new Schema(
   }
 )
 
+// ===== 使用者收藏清單 Schema
+const likesSchema = new Schema(
+  {
+    product: {
+      type: ObjectId,
+      ref: 'products',
+      required: [true, '缺少商品欄位']
+    }
+  }
+)
+
 // ===== 使用者 Schema
 const schema = new Schema(
   {
@@ -74,6 +85,9 @@ const schema = new Schema(
         https://boringavatars.com/
         */
       }
+    },
+    likes: {
+      type: [likesSchema]
     }
   },
   {
