@@ -60,6 +60,20 @@ const schema = new Schema(
       // 0 =會員，1 =管理員，缺少程式可讀性
       // 另外寫一個檔案 UserRole.js 再 import
       default: UserRole.USER
+    },
+    avatar: {
+      type: String,
+      // 預設值 default
+      // default: 'aaaaaaa',
+      // default 可以寫成 function，要用 this 所以不能用箭頭函式
+      default () {
+        // this.email 指的是同一筆資料 email 欄位的值
+        return `https://source.boringavatars.com/beam/120/${this.email}?colors=899AA1,BDA2A2,FBBE9A,FAD889,FAF5C8`
+        /*
+        自動產生大頭貼的網站 20231228 00:16:09
+        https://boringavatars.com/
+        */
+      }
     }
   },
   {
@@ -70,12 +84,17 @@ const schema = new Schema(
   }
 )
 
-// ===== mongoose 的虛擬欄位
-// schema.virtual('cartQuantity').get(function () {
-//   return this.cart.reduce((total, current) => {
-//     return total + current.quantity
-//   }, 0)
-// })
+// ===== 購物車內的總數量
+// 寫完後， users.js 的 controllers getProfile 的 function 可以直接取得數量
+// schema.virtual('欄位名') -> mongoose 的虛擬欄位，不會寫入資料庫，只會在取得資料時計算
+// .get(取值時要怎麼操作)    // .set(改值時要怎麼操作)
+// 20240108 影片 50:10
+schema.virtual('cartQuantity').get(function () {
+  // 計算購物車內的總數量
+  return this.cart.reduce((total, current) => {
+    return total + current.quantity
+  }, 0)
+})
 
 // ===== 密碼加密
 schema.pre('save', function (next) {
