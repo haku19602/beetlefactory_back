@@ -24,7 +24,7 @@ const upload = multer({
   },
   // --- 上傳檔案大小限制
   limits: {
-    fileSize: 1024 * 1024
+    fileSize: 1024 * 1024 * 2 // 2MB
   }
 })
 
