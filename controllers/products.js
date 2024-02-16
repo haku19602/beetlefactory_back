@@ -61,6 +61,7 @@ export const getAll = async (req, res) => {
       // 第 2 頁 = 11 ~ 20 = 跳過 10 筆 = (2 - 1) * 10
       // 第 3 頁 = 21 ~ 30 = 跳過 20 筆 = (3 - 1) * 10
       .skip((page - 1) * itemsPerPage)
+      // 前端有顯示全部選項，如果是 -1 就用 undefined 限制，會顯示全部
       .limit(itemsPerPage === -1 ? undefined : itemsPerPage)
 
     // === estimatedDocumentCount() 計算總資料數
@@ -83,7 +84,7 @@ export const getAll = async (req, res) => {
   }
 }
 
-// ===== 取得有上架的所有商品
+// ===== 取得有上架的所有商品 -> 一般使用者用
 // export const get = async (req, res) => {
 //   try {
 //     const sortBy = req.query.sortBy || 'createdAt'
@@ -162,40 +163,45 @@ export const getId = async (req, res) => {
   }
 }
 
-// export const edit = async (req, res) => {
-//   try {
-//     if (!validator.isMongoId(req.params.id)) throw new Error('ID')
+// ===== 編輯商品
+export const edit = async (req, res) => {
+  try {
+    if (!validator.isMongoId(req.params.id)) throw new Error('ID')
 
-//     req.body.image = req.file?.path
-//     await products.findByIdAndUpdate(req.params.id, req.body, { runValidators: true }).orFail(new Error('NOT FOUND'))
+    // 1. 先把圖片路徑放進 req.body.image
+    // 編輯時前端不一定會傳圖片，req.file 是 undefined，undefined 沒有 .path 所以要用 ?. 避免錯誤
+    req.body.image = req.file?.path
+    // 2. 再丟 req.body 更新資料，如果沒有圖片 req.file?.path 就是 undefined，不會更新圖片
+    // .findByIdAndUpdate(要修改的資料 ID, 要修改的資料, { 更新時是否執行驗證: 預設 false })
+    await products.findByIdAndUpdate(req.params.id, req.body, { runValidators: true }).orFail(new Error('NOT FOUND')) // orFail() 如果沒有找到資料，就自動丟出錯誤
 
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: ''
-//     })
-//   } catch (error) {
-//     if (error.name === 'CastError' || error.message === 'ID') {
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message: 'ID 格式錯誤'
-//       })
-//     } else if (error.message === 'NOT FOUND') {
-//       res.status(StatusCodes.NOT_FOUND).json({
-//         success: false,
-//         message: '查無商品'
-//       })
-//     } else if (error.name === 'ValidationError') {
-//       const key = Object.keys(error.errors)[0]
-//       const message = error.errors[key].message
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message
-//       })
-//     } else {
-//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//         success: false,
-//         message: '未知錯誤'
-//       })
-//     }
-//   }
-// }
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: ''
+    })
+  } catch (error) {
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'ID 格式錯誤'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無商品'
+      })
+    } else if (error.name === 'ValidationError') {
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
+  }
+}
