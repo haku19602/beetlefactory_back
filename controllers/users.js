@@ -258,3 +258,59 @@ export const avatar = async (req, res) => {
 //     })
 //   }
 // }
+
+// ==================================== 自己新增的內容 ====================================
+// ===== 取全部使用者 - 管理員用
+export const getAll = async (req, res) => {
+  try {
+    // === 取得所有使用者，設定顯示條件
+    /*
+      --- req 的參數，可以取得當前的路由資訊
+        ->  req.originalUrl = /users/test?aaa=111&bbb=2
+            req.query = { aaa: 111, bbb: 222 }
+    */
+    const sortBy = req.query.sortBy || 'createdAt' // 依照什麼排序，預設是建立時間
+    const sortOrder = parseInt(req.query.sortOrder) || -1 // 正序or倒序，預設倒序（時間的話是新到舊
+    const itemsPerPage = parseInt(req.query.itemsPerPage) || 20 // 一頁幾筆，預設 20 筆
+    const page = parseInt(req.query.page) || 1 // 現在是第幾頁，預設第 1 頁
+    const regex = new RegExp(req.query.search || '', 'i') // 關鍵字搜尋，沒傳值就是空字串，i 是設定不分大小寫
+
+    const data = await users
+      .find({
+        $or: [{ account: regex }, { email: regex }] // $ or mongoose 的語法，找 account 或 email 欄位符合 regex 的資料。直接寫文字是找完全符合的資料，這邊用正則表示式找部分符合的資料
+      })
+      /*
+        // [sortBy] 把變數當成 key 來用，不是陣列
+        -> 舉例
+          const text = 'a'
+          const obj = { [text]: 1 }
+          obj.a = 1
+      */
+      .sort({ [sortBy]: sortOrder })
+      // 如果一頁 10 筆
+      // 第 1 頁 = 0 ~ 10 = 跳過 0 筆 = (1 - 1) * 10
+      // 第 2 頁 = 11 ~ 20 = 跳過 10 筆 = (2 - 1) * 10
+      // 第 3 頁 = 21 ~ 30 = 跳過 20 筆 = (3 - 1) * 10
+      .skip((page - 1) * itemsPerPage)
+      // 前端有顯示全部選項，如果是 -1 就用 undefined 限制，會顯示全部
+      .limit(itemsPerPage === -1 ? undefined : itemsPerPage)
+
+    // === estimatedDocumentCount() 計算總資料數
+    const total = await users.estimatedDocumentCount()
+    // === 回傳成功結果
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: {
+        data,
+        total
+      }
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
+  }
+}
