@@ -11,6 +11,7 @@ router.get('/all', auth.jwt, admin, getAll)
 router.patch('/:id', auth.jwt, admin, upload, edit)
 // router.get('/', get)
 // router.get('/:id', getId)
+// ----------
 router.delete('/:id', auth.jwt, admin, remove)
 
 export default router
