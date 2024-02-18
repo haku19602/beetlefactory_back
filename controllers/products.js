@@ -84,50 +84,51 @@ export const getAll = async (req, res) => {
   }
 }
 
-// ===== 取得有上架的所有商品 -> 一般使用者用
-// export const get = async (req, res) => {
-//   try {
-//     const sortBy = req.query.sortBy || 'createdAt'
-//     const sortOrder = parseInt(req.query.sortOrder) || -1
-//     const itemsPerPage = parseInt(req.query.itemsPerPage) || 20
-//     const page = parseInt(req.query.page) || 1
-//     const regex = new RegExp(req.query.search || '', 'i')
+// ===== 取得上架的所有商品 -> 一般使用者用
+export const get = async (req, res) => {
+  try {
+    const sortBy = req.query.sortBy || 'createdAt'
+    const sortOrder = parseInt(req.query.sortOrder) || -1
+    const itemsPerPage = parseInt(req.query.itemsPerPage) || 20
+    const page = parseInt(req.query.page) || 1
+    const regex = new RegExp(req.query.search || '', 'i')
 
-//     const data = await products
-//       .find({
-//         sell: true,
-//         $or: [{ name: regex }, { description: regex }]
-//       })
-//       // const text = 'a'
-//       // const obj = { [text]: 1 }
-//       // obj.a = 1
-//       .sort({ [sortBy]: sortOrder })
-//       // 如果一頁 10 筆
-//       // 第 1 頁 = 0 ~ 10 = 跳過 0 筆 = (1 - 1) * 10
-//       // 第 2 頁 = 11 ~ 20 = 跳過 10 筆 = (2 - 1) * 10
-//       // 第 3 頁 = 21 ~ 30 = 跳過 20 筆 = (3 - 1) * 10
-//       .skip((page - 1) * itemsPerPage)
-//       .limit(itemsPerPage === -1 ? undefined : itemsPerPage)
+    const data = await products
+      .find({
+        sell: true, // 只顯示上架商品
+        // stock: { $gt: 0 }, // 只顯示有庫存商品
+        $or: [{ name: regex }, { description: regex }]
+      })
+      // const text = 'a'
+      // const obj = { [text]: 1 }
+      // obj.a = 1
+      .sort({ [sortBy]: sortOrder })
+      // 如果一頁 10 筆
+      // 第 1 頁 = 0 ~ 10 = 跳過 0 筆 = (1 - 1) * 10
+      // 第 2 頁 = 11 ~ 20 = 跳過 10 筆 = (2 - 1) * 10
+      // 第 3 頁 = 21 ~ 30 = 跳過 20 筆 = (3 - 1) * 10
+      .skip((page - 1) * itemsPerPage)
+      .limit(itemsPerPage === -1 ? undefined : itemsPerPage)
 
-//     // estimatedDocumentCount() 計算總資料數        -> 沒有篩選
-//     // countDocuments() 依照 () 內篩選計算總資料數    -> 要篩選
-//     const total = await products.countDocuments({ sell: true })
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: '',
-//       result: {
-//         data,
-//         total
-//       }
-//     })
-//   } catch (error) {
-//     console.log(error)
-//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//       success: false,
-//       message: '未知錯誤'
-//     })
-//   }
-// }
+    // estimatedDocumentCount() 計算總資料數        -> 沒有篩選
+    // countDocuments() 依照 () 內篩選計算總資料數    -> 要篩選
+    const total = await products.countDocuments({ sell: true })
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: {
+        data,
+        total
+      }
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
+  }
+}
 
 // ===== 取得單一商品
 export const getId = async (req, res) => {
@@ -163,7 +164,7 @@ export const getId = async (req, res) => {
   }
 }
 
-// ===== 編輯商品
+// ===== 編輯商品 - 後台
 export const edit = async (req, res) => {
   try {
     if (!validator.isMongoId(req.params.id)) throw new Error('ID')
@@ -207,7 +208,7 @@ export const edit = async (req, res) => {
 }
 
 // ==================================== 自己新增的內容 ====================================
-// ===== 刪除商品
+// ===== 刪除商品 - 後台
 export const remove = async (req, res) => {
   try {
     if (!validator.isMongoId(req.params.id)) throw new Error('ID')
