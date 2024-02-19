@@ -1,7 +1,7 @@
 import users from '../models/users.js'
 import { StatusCodes } from 'http-status-codes'
 import jwt from 'jsonwebtoken'
-// import products from '../models/products.js'
+import products from '../models/products.js'
 import validator from 'validator'
 
 // ===== 註冊
@@ -145,85 +145,91 @@ export const getProfile = (req, res) => {
   }
 }
 
-// 20240117 -------------------------------------------------------------
-// export const editCart = async (req, res) => {
-//   try {
-//     // 檢查商品 id 格式對不對
-//     if (!validator.isMongoId(req.body.product)) throw new Error('ID')
+// 20240118 -------------------------------------------------------------
+// ===== 加進商品購物車
+export const editCart = async (req, res) => {
+  try {
+    // === 檢查商品 id 格式對不對
+    if (!validator.isMongoId(req.body.product)) throw new Error('ID')
 
-//     // 尋找購物車內有沒有傳入的商品 ID
-//     const idx = req.user.cart.findIndex((item) => item.product.toString() === req.body.product)
-//     if (idx > -1) {
-//       // 修改購物車內已有的商品數量
-//       const quantity = req.user.cart[idx].quantity + parseInt(req.body.quantity)
-//       // 檢查數量
-//       // 小於 0，移除
-//       // 大於 0，修改
-//       if (quantity <= 0) {
-//         req.user.cart.splice(idx, 1)
-//       } else {
-//         req.user.cart[idx].quantity = quantity
-//       }
-//     } else {
-//       // 檢查商品是否存在或已下架
-//       const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
-//       if (!product.sell) {
-//         throw new Error('NOT FOUND')
-//       } else {
-//         req.user.cart.push({
-//           product: product._id,
-//           quantity: req.body.quantity
-//         })
-//       }
-//     }
-//     await req.user.save()
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: '',
-//       result: req.user.cartQuantity
-//     })
-//   } catch (error) {
-//     if (error.name === 'CastError' || error.message === 'ID') {
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message: 'ID 格式錯誤'
-//       })
-//     } else if (error.message === 'NOT FOUND') {
-//       res.status(StatusCodes.NOT_FOUND).json({
-//         success: false,
-//         message: '查無商品'
-//       })
-//     } else if (error.name === 'ValidationError') {
-//       const key = Object.keys(error.errors)[0]
-//       const message = error.errors[key].message
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message
-//       })
-//     } else {
-//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//         success: false,
-//         message: '未知錯誤'
-//       })
-//     }
-//   }
-// }
+    // === 尋找購物車內有沒有傳入的商品 ID
+    const idx = req.user.cart.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
+    if (idx > -1) { // --- 如果購物車內有此商品 ID（陣列索引值最小是 0）
+      // 新數量 = 購物車內數量 + 傳入的數量
+      const quantity = req.user.cart[idx].quantity + parseInt(req.body.quantity)
+      // 檢查目前購物車內新數量 ->
+      if (quantity <= 0) {
+        // 小於 0，移除商品
+        req.user.cart.splice(idx, 1)
+      } else {
+        // 大於 0，修改成新數量
+        req.user.cart[idx].quantity = quantity
+      }
+    } else { // --- 如果沒有，就新增商品
+      // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
+      const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
+      // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
+      if (!product.sell) {
+        throw new Error('NOT FOUND')
+      } else {
+        // 商品存在架上 -> 加進購物車
+        req.user.cart.push({
+          product: product._id,
+          quantity: req.body.quantity
+        })
+      }
+    }
+    // 存檔
+    await req.user.save()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: req.user.cartQuantity // 回傳購物車內的總數量給前端
+    })
+  } catch (error) {
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: '商品 ID 格式錯誤'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無商品'
+      })
+    } else if (error.name === 'ValidationError') {
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
+  }
+}
 
-// export const getCart = async (req, res) => {
-//   try {
-//     const result = await users.findById(req.user._id, 'cart').populate('cart.product')
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: '',
-//       result: result.cart
-//     })
-//   } catch (error) {
-//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//       success: false,
-//       message: '未知錯誤'
-//     })
-//   }
-// }
+// ===== 取得購物車內的商品
+export const getCart = async (req, res) => {
+  try {
+    // .findById(要找的資料 ID, '要顯示的欄位').populate('要帶出資料的目標欄位(此欄位須有 ref)', '要取的欄位資料(選填)')
+    const result = await users.findById(req.user._id, 'cart').populate('cart.product')
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: result.cart
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
+  }
+}
 
 // ==================================== 自己新增的內容 ====================================
 // ===== 取全部使用者 - 管理員用
