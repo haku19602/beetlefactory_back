@@ -134,7 +134,8 @@ export const getProfile = (req, res) => {
         */
         // 新寫法 => 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
-        avatar: req.user.avatar
+        avatar: req.user.avatar,
+        likes: req.user.likes
       }
     })
   } catch (error) {
@@ -146,7 +147,7 @@ export const getProfile = (req, res) => {
 }
 
 // 20240118 -------------------------------------------------------------
-// ===== 商品增減進購物車
+// ===== 編輯購物車商品清單
 export const editCart = async (req, res) => {
   try {
     // === 檢查商品 id 格式對不對
@@ -378,59 +379,66 @@ export const remove = async (req, res) => {
   }
 }
 
-// ===== 加入or移除喜歡的商品
-// export const editLikes = async (req, res) => {
-//   try {
-//     // === 檢查商品 id 格式對不對
-//     if (!validator.isMongoId(req.body.product)) throw new Error('ID')
+// ===== 編輯喜歡清單
+export const editLikes = async (req, res) => {
+  try {
+    // === 檢查商品 id 格式對不對
+    if (!validator.isMongoId(req.body.product)) throw new Error('ID')
 
-//     // === 尋找喜歡清單內有沒有傳入的商品 ID
-//     const idx = req.user.likes.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
-//     if (idx > -1) { // --- 如果喜歡清單內有此商品 ID（陣列索引值最小是 0）
-//       // 移除商品
-//       req.user.likes.splice(idx, 1)
-//     } else { // --- 如果沒有，就新增進喜歡清單
-//       // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
-//       const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
-//       // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
-//       if (!product.sell) {
-//         throw new Error('NOT FOUND')
-//       } else {
-//         // 商品存在架上 -> 加進喜歡清單
-//         req.user.likes.push({
-//           product: product._id
-//         })
-//       }
-//     }
-//     // 存檔
-//     await req.user.save()
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: '',
-//       result: req.user.likes
-//     })
-//   } catch (error) {
-//     console.log(error)
-//     if (error.name === 'CastError' || error.message === 'ID') {
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message: '商品 ID 格式錯誤'
-//       })
-//     } else if (error.message === 'NOT FOUND') {
-//       res.status(StatusCodes.NOT_FOUND).json({
-//         success: false,
-//         message: '查無商品'
-//       })
-//     } else if (error.name === 'ValidationError') {
-//       const key = Object.keys(error.errors)[0]
-//       const message = error.errors[key].message
-//       res.status(StatusCodes.BAD_REQUEST).json({
-//         success: false,
-//         message
-//       })
-//     }
-//   }
-// }
+    // === 尋找喜歡使用者清單內有沒有傳入的商品 ID
+    const idx = req.user.likes.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
+    // ----- 如果喜歡清單內有此商品 ID（陣列索引值最小是 0）
+    if (idx > -1) {
+      // 移除商品
+      req.user.likes.splice(idx, 1)
+    } else {
+      // ----- 如果喜歡清單內沒有，就新增進喜歡清單
+      // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
+      const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
+      // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
+      if (!product.sell) {
+        throw new Error('NOT FOUND')
+      } else {
+        // 商品存在架上 -> 加進喜歡清單
+        req.user.likes.push({
+          product: product._id
+        })
+      }
+    }
+    // 存檔
+    await req.user.save()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: req.user.likes.length // 回傳喜歡清單內的總數量給前端
+    })
+  } catch (error) {
+    console.log(error)
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: '商品 ID 格式錯誤'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無商品'
+      })
+    } else if (error.name === 'ValidationError') {
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
+  }
+}
 
 // ===== 換大頭貼
 // export const avatar = async (req, res) => {
