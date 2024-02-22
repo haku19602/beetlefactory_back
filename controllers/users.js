@@ -146,7 +146,7 @@ export const getProfile = (req, res) => {
 }
 
 // 20240118 -------------------------------------------------------------
-// ===== 加進商品購物車
+// ===== 商品增減進購物車
 export const editCart = async (req, res) => {
   try {
     // === 檢查商品 id 格式對不對
@@ -154,23 +154,34 @@ export const editCart = async (req, res) => {
 
     // === 尋找購物車內有沒有傳入的商品 ID
     const idx = req.user.cart.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
-    if (idx > -1) { // --- 如果購物車內有此商品 ID（陣列索引值最小是 0）
+    // === 尋找資料庫裡商品的資料
+    const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
+
+    // ----- 如果購物車內有此商品 ID（陣列索引值最小是 0）
+    if (idx > -1) {
       // 新數量 = 購物車內數量 + 傳入的數量
       const quantity = req.user.cart[idx].quantity + parseInt(req.body.quantity)
       // 檢查目前購物車內新數量 ->
       if (quantity <= 0) {
         // 小於 0，移除商品
         req.user.cart.splice(idx, 1)
+      } else if (quantity > product.stock) {
+        // 新數量大於庫存，修改成庫存數量
+        req.user.cart[idx].quantity = product.stock
+        throw new Error('NOT ENOUGH STOCK')
       } else {
-        // 大於 0，修改成新數量
+        // 新數量小於庫存，修改成新數量
         req.user.cart[idx].quantity = quantity
       }
-    } else { // --- 如果沒有，就新增商品
+    } else {
+      // ----- 如果購物車內沒有商品，就新增商品
       // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
-      const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
       // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
       if (!product.sell) {
         throw new Error('NOT FOUND')
+      } else if (req.body.quantity > product.stock) {
+        // 商品存在架上，但是請求數量大於庫存 -> 丟出錯誤 'NOT ENOUGH STOCK'
+        throw new Error('NOT ENOUGH STOCK')
       } else {
         // 商品存在架上 -> 加進購物車
         req.user.cart.push({
@@ -184,9 +195,10 @@ export const editCart = async (req, res) => {
     res.status(StatusCodes.OK).json({
       success: true,
       message: '',
-      result: req.user.cartQuantity // 回傳購物車內的總數量給前端
+      result: req.user.cartQuantity // 回傳購物車內的總數量給前端，cartQuantity 是在 users.js 的 models 寫的虛擬欄位
     })
   } catch (error) {
+    console.log(error)
     if (error.name === 'CastError' || error.message === 'ID') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -196,6 +208,11 @@ export const editCart = async (req, res) => {
       res.status(StatusCodes.NOT_FOUND).json({
         success: false,
         message: '查無商品'
+      })
+    } else if (error.message === 'NOT ENOUGH STOCK') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '商品庫存不足'
       })
     } else if (error.name === 'ValidationError') {
       const key = Object.keys(error.errors)[0]
@@ -307,7 +324,7 @@ export const edit = async (req, res) => {
     if (error.name === 'CastError' || error.message === 'ID') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'ID 格式錯誤'
+        message: '請求使用者 ID 格式錯誤 user controller edit'
       })
     } else if (error.message === 'NOT FOUND') {
       res.status(StatusCodes.NOT_FOUND).json({
@@ -345,7 +362,7 @@ export const remove = async (req, res) => {
     if (error.name === 'CastError' || error.message === 'ID') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'ID 格式錯誤'
+        message: '請求使用者 ID 格式錯誤 remove'
       })
     } else if (error.message === 'NOT FOUND') {
       res.status(StatusCodes.NOT_FOUND).json({
@@ -361,36 +378,90 @@ export const remove = async (req, res) => {
   }
 }
 
+// ===== 加入or移除喜歡的商品
+// export const editLikes = async (req, res) => {
+//   try {
+//     // === 檢查商品 id 格式對不對
+//     if (!validator.isMongoId(req.body.product)) throw new Error('ID')
+
+//     // === 尋找喜歡清單內有沒有傳入的商品 ID
+//     const idx = req.user.likes.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
+//     if (idx > -1) { // --- 如果喜歡清單內有此商品 ID（陣列索引值最小是 0）
+//       // 移除商品
+//       req.user.likes.splice(idx, 1)
+//     } else { // --- 如果沒有，就新增進喜歡清單
+//       // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
+//       const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
+//       // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
+//       if (!product.sell) {
+//         throw new Error('NOT FOUND')
+//       } else {
+//         // 商品存在架上 -> 加進喜歡清單
+//         req.user.likes.push({
+//           product: product._id
+//         })
+//       }
+//     }
+//     // 存檔
+//     await req.user.save()
+//     res.status(StatusCodes.OK).json({
+//       success: true,
+//       message: '',
+//       result: req.user.likes
+//     })
+//   } catch (error) {
+//     console.log(error)
+//     if (error.name === 'CastError' || error.message === 'ID') {
+//       res.status(StatusCodes.BAD_REQUEST).json({
+//         success: false,
+//         message: '商品 ID 格式錯誤'
+//       })
+//     } else if (error.message === 'NOT FOUND') {
+//       res.status(StatusCodes.NOT_FOUND).json({
+//         success: false,
+//         message: '查無商品'
+//       })
+//     } else if (error.name === 'ValidationError') {
+//       const key = Object.keys(error.errors)[0]
+//       const message = error.errors[key].message
+//       res.status(StatusCodes.BAD_REQUEST).json({
+//         success: false,
+//         message
+//       })
+//     }
+//   }
+// }
+
 // ===== 換大頭貼
-export const avatar = async (req, res) => {
-  try {
-    /*
-    console.log(req.file) -> 得到以下物件
-    {
-      fieldname: 'image',
-      originalname: '0104.jpg',
-      encoding: '7bit',
-      mimetype: 'image/jpeg',
-      path: 'https://res.cloudinary.com/xxx.jpg',
-      size: 46736,
-      filename: 'wfsjhnj7mhucazq9rcpj'
-    }
-    */
-    // 把大題貼改成這次檔案上傳的路徑
-    req.user.avatar = req.file.path // 多檔上傳 req.files
-    // 保存
-    await req.user.save()
-    // 回覆成功
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: '',
-      result: req.user.avatar
-    })
-  } catch (error) {
-    console.log(error)
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: '伺服器錯誤'
-    })
-  }
-}
+// export const avatar = async (req, res) => {
+//   try {
+//     /*
+//     console.log(req.file) -> 得到以下物件
+//     {
+//       fieldname: 'image',
+//       originalname: '0104.jpg',
+//       encoding: '7bit',
+//       mimetype: 'image/jpeg',
+//       path: 'https://res.cloudinary.com/xxx.jpg',
+//       size: 46736,
+//       filename: 'wfsjhnj7mhucazq9rcpj'
+//     }
+//     */
+//     // 把大題貼改成這次檔案上傳的路徑
+//     req.user.avatar = req.file.path // 多檔上傳 req.files
+//     // 保存
+//     await req.user.save()
+//     // 回覆成功
+//     res.status(StatusCodes.OK).json({
+//       success: true,
+//       message: '',
+//       result: req.user.avatar
+//     })
+//   } catch (error) {
+//     console.log(error)
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: '伺服器錯誤'
+//     })
+//   }
+// }

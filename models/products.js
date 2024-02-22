@@ -22,7 +22,7 @@ const schema = new Schema(
       type: String,
       required: [true, '缺少商品分類'],
       enum: {
-        values: ['成蟲', '幼蟲', '標本'],
+        values: ['成蟲', '幼蟲', '標本', '其他'],
         message: '商品分類錯誤'
       }
     },

@@ -148,7 +148,7 @@ export const getId = async (req, res) => {
     if (error.name === 'CastError' || error.message === 'ID') { // 'CastError' 是 mongoose 的錯誤，代表 ID 格式錯誤
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'ID 格式錯誤'
+        message: '請求商品 ID 格式錯誤'
       })
     } else if (error.message === 'NOT FOUND') {
       res.status(StatusCodes.NOT_FOUND).json({
@@ -184,7 +184,7 @@ export const edit = async (req, res) => {
     if (error.name === 'CastError' || error.message === 'ID') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'ID 格式錯誤'
+        message: '請求商品 ID 格式錯誤'
       })
     } else if (error.message === 'NOT FOUND') {
       res.status(StatusCodes.NOT_FOUND).json({
@@ -223,7 +223,7 @@ export const remove = async (req, res) => {
     if (error.name === 'CastError' || error.message === 'ID') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'ID 格式錯誤'
+        message: '請求商品 ID 格式錯誤'
       })
     } else if (error.message === 'NOT FOUND') {
       res.status(StatusCodes.NOT_FOUND).json({
