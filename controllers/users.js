@@ -395,15 +395,15 @@ export const editLikes = async (req, res) => {
       // ----- 如果喜歡清單內沒有，就新增進喜歡清單
       // 檢查商品 id 是否存在 -> 沒有就丟出錯誤 'NOT FOUND'
       const product = await products.findById(req.body.product).orFail(new Error('NOT FOUND'))
-      // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND'
-      if (!product.sell) {
-        throw new Error('NOT FOUND')
-      } else {
-        // 商品存在架上 -> 加進喜歡清單
-        req.user.likes.push({
-          product: product._id
-        })
-      }
+      // 檢查商品是否下架 -> 沒有就丟出錯誤 'NOT FOUND' ---> 這邊不需要了，讓下架商品可以加入喜歡清單
+      // if (!product.sell) {
+      //   throw new Error('NOT FOUND')
+      // } else {
+      // 商品存在架上 -> 加進喜歡清單
+      req.user.likes.push({
+        product: product._id
+      })
+      // }
     }
     // 存檔
     await req.user.save()
