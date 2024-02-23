@@ -234,7 +234,7 @@ export const editCart = async (req, res) => {
 // ===== 取得購物車內的商品
 export const getCart = async (req, res) => {
   try {
-    // .findById(要找的資料 ID, '要顯示的欄位').populate('要帶出資料的目標欄位(此欄位須有 ref)', '要取的欄位資料(選填)')
+    // .findById(要找的資料 ID, '要顯示的欄位(選填)').populate('要帶出資料的目標欄位(此欄位須有 ref)', '要取的欄位資料(選填)')
     const result = await users.findById(req.user._id, 'cart').populate('cart.product')
     res.status(StatusCodes.OK).json({
       success: true,

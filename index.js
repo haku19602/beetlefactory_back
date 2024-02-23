@@ -4,10 +4,10 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import routeUsers from './routes/users.js'
 import routeProducts from './routes/products.js'
-// import routeOrders from './routes/orders.js'
+import routeOrders from './routes/orders.js'
 import { StatusCodes } from 'http-status-codes'
-// import mongoSanitize from 'express-mongo-sanitize'
 import './passport/passport.js'
+// import mongoSanitize from 'express-mongo-sanitize'
 
 // ===== 建立網頁伺服器
 const app = express()
@@ -53,7 +53,7 @@ app.use((_, req, res, next) => {
 // ===== 路徑
 app.use('/users', routeUsers)
 app.use('/products', routeProducts)
-// app.use('/orders', routeOrders)
+app.use('/orders', routeOrders)
 
 // ===== 其他沒寫的路徑
 /*
