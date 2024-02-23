@@ -51,6 +51,18 @@ const schema = new Schema(
     phone: {
       type: String,
       required: [true, '缺少收件人手機號碼']
+    },
+    // 是否已付款
+    paid: {
+      type: Boolean,
+      default: false,
+      required: [true, '缺少付款狀態']
+    },
+    // 是否完成交易
+    done: {
+      type: Boolean,
+      default: false,
+      required: [true, '缺少完成訂單狀態']
     }
   },
   {
