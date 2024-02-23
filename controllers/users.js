@@ -62,7 +62,8 @@ export const login = async (req, res) => {
         */
         // 新寫法 -> 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
-        avatar: req.user.avatar
+        avatar: req.user.avatar,
+        likes: req.user.likes
       }
     })
   } catch (error) {
