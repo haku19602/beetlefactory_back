@@ -1,5 +1,6 @@
 import orders from '../models/orders.js'
 import users from '../models/users.js'
+import products from '../models/products.js'
 import { StatusCodes } from 'http-status-codes'
 
 // ===== 新增訂單
@@ -17,14 +18,27 @@ export const create = async (req, res) => {
 
     // === 建立訂單
     await orders.create({
+      // --- 直接以 req.user 取得資料庫中 user 的資料
       user: req.user._id,
       cart: req.user.cart,
-      // ----- 以下為新增的欄位 -----
+      // --- 從請求中傳進來資料
       delivery: req.body.delivery,
       address: req.body.address,
       name: req.body.name,
-      phone: req.body.phone
+      phone: req.body.phone,
+      note: req.body.note
     })
+
+    // === 扣除商品庫存
+    // 逐一處理每個商品
+    for (const item of req.user.cart) {
+      // 找到商品
+      const product = await products.findById(item.product)
+      // 扣除庫存
+      product.stock -= item.quantity
+      // 存檔
+      await product.save()
+    }
 
     // === 清空購物車
     req.user.cart = []
@@ -40,10 +54,10 @@ export const create = async (req, res) => {
         success: false,
         message: '購物車沒有商品'
       })
-    } else if (error.name === 'SELL') {
+    } else if (error.message === 'SELL') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: '購物車商品已下架 或 庫存不足'
+        message: '購物車商品已下架 或 暫時無庫存，請重新選購'
       })
     } else if (error.name === 'ValidationError') {
       const key = Object.keys(error.errors)[0]
