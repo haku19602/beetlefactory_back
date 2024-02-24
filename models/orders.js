@@ -50,7 +50,12 @@ const schema = new Schema(
     },
     phone: {
       type: String,
-      required: [true, '缺少收件人手機號碼']
+      required: [true, '缺少收件人電話']
+    },
+    // 備註
+    note: {
+      type: String,
+      default: ''
     },
     // 是否已付款
     paid: {
