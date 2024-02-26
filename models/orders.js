@@ -36,7 +36,7 @@ const schema = new Schema(
       type: String,
       required: [true, '缺少運送方式'],
       enum: {
-        values: ['黑貓', '7-11 店到店', '面交'],
+        values: ['黑貓', '7-11 交貨便', '面交'],
         message: '非指定運送方式'
       }
     },
