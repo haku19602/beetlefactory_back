@@ -2,6 +2,8 @@ import orders from '../models/orders.js'
 import users from '../models/users.js'
 import products from '../models/products.js'
 import { StatusCodes } from 'http-status-codes'
+import validator from 'validator'
+// import mongoose from 'mongoose'
 
 // ===== 新增訂單
 export const create = async (req, res) => {
@@ -57,7 +59,7 @@ export const create = async (req, res) => {
     } else if (error.message === 'SELL') {
       res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: '購物車商品已下架 或 暫時無庫存，請重新選購'
+        message: '購物車商品庫存更新！3 秒後自動重整...'
       })
     } else if (error.name === 'ValidationError') {
       const key = Object.keys(error.errors)[0]
@@ -93,20 +95,89 @@ export const get = async (req, res) => {
   }
 }
 
-// ===== 取得訂單 - 管理員
+// ===== 取得全部訂單 - 管理員
+// export const getAll = async (req, res) => {
+//   try {
+//     const result = await orders.find().populate('user', 'account').populate('cart.product')
+//     res.status(StatusCodes.OK).json({
+//       success: true,
+//       message: '',
+//       result
+//     })
+//   } catch (error) {
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: '未知錯誤'
+//     })
+//   }
+// }
+
 export const getAll = async (req, res) => {
   try {
-    // populate('要帶出資料的目標欄位(此欄位須有 ref)', '要取的欄位資料(選填)') -> 這裡只取訂單中 user 的 account 欄位，及訂單中 cart.product 欄位關聯的全部資料
-    const result = await orders.find().populate('user', 'account').populate('cart.product')
+    const sortBy = req.query.sortBy || 'createdAt' // 依照什麼排序，預設是建立時間
+    const sortOrder = parseInt(req.query.sortOrder) || -1 // 正序or倒序，預設倒序（時間的話是新到舊
+    const itemsPerPage = parseInt(req.query.itemsPerPage) || 20 // 一頁幾筆，預設 20 筆
+    const page = parseInt(req.query.page) || 1 // 現在是第幾頁，預設第 1 頁
+    // const searchKeyword = new mongoose.Types.ObjectId(req.query.search) || '' // 關鍵字搜尋，沒傳值就是空字串
+
+    const data = await orders
+      .find(
+        // { _id: searchKeyword } // $ or mongoose 的語法，找 _id 欄位符合 searchKeyword 的資料
+      )
+      .sort({ [sortBy]: sortOrder }) // [sortBy] 是把變數當成 key 來用，不是陣列
+      .skip((page - 1) * itemsPerPage) // 跳過幾筆
+      .limit(itemsPerPage === -1 ? undefined : itemsPerPage) // 限制幾筆
+      .populate('user', 'account avatar') // populate('要帶出資料的目標欄位，此欄位須有 ref', '要取的欄位資料(選填)') -> 這裡只取訂單中 user 的 account 欄位和 avatar 欄位
+      .populate('cart.product')
+
+    // === estimatedDocumentCount() 計算總資料數
+    const total = await products.estimatedDocumentCount()
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: {
+        data,
+        total
+      }
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
+  }
+}
+
+// ==================================== 新增的內容 ====================================
+// ===== 取得訂單 - 單筆
+export const getId = async (req, res) => {
+  try {
+    if (!validator.isMongoId(req.params.id)) throw new Error('ID')
+
+    const result = await orders.findById(req.params.id).populate('user', 'account avatar').populate('cart.product')
     res.status(StatusCodes.OK).json({
       success: true,
       message: '',
       result
     })
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: '未知錯誤'
-    })
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: '請求訂單 ID 格式錯誤'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無訂單'
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
   }
 }
