@@ -112,7 +112,7 @@ export const get = async (req, res) => {
 
     // estimatedDocumentCount() 計算總資料數        -> 沒有篩選
     // countDocuments() 依照 () 內篩選計算總資料數    -> 要篩選
-    const total = await products.countDocuments({ sell: true })
+    const total = await products.countDocuments({ sell: true }) // 用來計算分頁
     res.status(StatusCodes.OK).json({
       success: true,
       message: '',

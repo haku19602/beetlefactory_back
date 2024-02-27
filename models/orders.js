@@ -63,6 +63,12 @@ const schema = new Schema(
       default: false,
       required: [true, '缺少付款狀態']
     },
+    // 是否已出貨
+    shipped: {
+      type: Boolean,
+      default: false,
+      required: [true, '缺少出貨狀態']
+    },
     // 是否完成交易
     done: {
       type: Boolean,

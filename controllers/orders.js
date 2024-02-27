@@ -111,7 +111,6 @@ export const get = async (req, res) => {
 //     })
 //   }
 // }
-
 export const getAll = async (req, res) => {
   try {
     const sortBy = req.query.sortBy || 'createdAt' // 依照什麼排序，預設是建立時間
@@ -122,7 +121,7 @@ export const getAll = async (req, res) => {
 
     const data = await orders
       .find(
-        // { _id: searchKeyword } // $ or mongoose 的語法，找 _id 欄位符合 searchKeyword 的資料
+        // { _id: searchKeyword } // 找 _id 欄位符合 searchKeyword 的資料
       )
       .sort({ [sortBy]: sortOrder }) // [sortBy] 是把變數當成 key 來用，不是陣列
       .skip((page - 1) * itemsPerPage) // 跳過幾筆
@@ -131,7 +130,7 @@ export const getAll = async (req, res) => {
       .populate('cart.product')
 
     // === estimatedDocumentCount() 計算總資料數
-    const total = await products.estimatedDocumentCount()
+    const total = await orders.estimatedDocumentCount()
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -161,6 +160,38 @@ export const getId = async (req, res) => {
       success: true,
       message: '',
       result
+    })
+  } catch (error) {
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: '請求訂單 ID 格式錯誤'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無訂單'
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
+  }
+}
+
+// ===== 更新訂單狀態
+export const update = async (req, res) => {
+  try {
+    if (!validator.isMongoId(req.params.id)) throw new Error('ID')
+
+    // .findByIdAndUpdate(要修改的資料 ID, 要修改的資料, { 更新時是否執行驗證: 預設 false })
+    await orders.findByIdAndUpdate(req.params.id, req.body, { runValidators: true }).orFail(new Error('NOT FOUND'))
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: ''
     })
   } catch (error) {
     if (error.name === 'CastError' || error.message === 'ID') {
