@@ -37,7 +37,7 @@ export const create = async (req, res) => {
   }
 }
 
-// ===== 登入
+// ===== 登入 -> 簽 token、回應使用者資料給前端
 export const login = async (req, res) => {
   try {
     // === 簽一個 token
@@ -63,7 +63,7 @@ export const login = async (req, res) => {
         // 新寫法 -> 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
         avatar: req.user.avatar,
-        likes: req.user.likes
+        likes: req.user.likes.map((item) => item.product) // 只回傳商品 _id 組成的陣列，不要包物件跟欄位 _id
       }
     })
   } catch (error) {
@@ -116,7 +116,7 @@ export const extend = async (req, res) => {
   }
 }
 
-// ===== 登入後，前端用 token 去取得個人資料
+// ===== 登入後，重整時，前端用 token 去取得個人資料
 // 前端登入後，只會在 localStorage 存 token，不會存其他資料
 export const getProfile = (req, res) => {
   try {
@@ -136,7 +136,7 @@ export const getProfile = (req, res) => {
         // 新寫法 => 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
         avatar: req.user.avatar,
-        likes: req.user.likes
+        likes: req.user.likes.map((item) => item.product) // 只回傳商品 ID 組成的陣列，不要包物件跟欄位 _id
       }
     })
   } catch (error) {
@@ -250,7 +250,7 @@ export const getCart = async (req, res) => {
   }
 }
 
-// ==================================== 自己新增的內容 ====================================
+// ==================================== 新增的內容 ====================================
 // ===== 取全部使用者 - 管理員用
 export const getAll = async (req, res) => {
   try {
@@ -386,7 +386,7 @@ export const editLikes = async (req, res) => {
     // === 檢查商品 id 格式對不對
     if (!validator.isMongoId(req.body.product)) throw new Error('ID')
 
-    // === 尋找喜歡使用者清單內有沒有傳入的商品 ID
+    // === 尋找喜歡使用者清單內有沒有傳入的 ID
     const idx = req.user.likes.findIndex((item) => item.product.toString() === req.body.product) // req.body.product 是字串； item.product 是 mongoose 的 ObjectId，所以要 toString() 才能比較
     // ----- 如果喜歡清單內有此商品 ID（陣列索引值最小是 0）
     if (idx > -1) {
@@ -410,8 +410,8 @@ export const editLikes = async (req, res) => {
     await req.user.save()
     res.status(StatusCodes.OK).json({
       success: true,
-      message: '',
-      result: req.user.likes.length // 回傳喜歡清單內的總數量給前端
+      message: ''
+      // result: req.user.likes.length // 回傳喜歡清單內的總數量給前端
     })
   } catch (error) {
     console.log(error)
@@ -438,6 +438,24 @@ export const editLikes = async (req, res) => {
         message: '未知錯誤'
       })
     }
+  }
+}
+
+// ===== 取得喜歡清單內的商品
+export const getLikes = async (req, res) => {
+  try {
+    // .findById(要找的資料 ID, '要顯示的欄位(選填)').populate('要帶出資料的目標欄位(此欄位須有 ref)', '要取的欄位資料(選填)')
+    const result = await users.findById(req.user._id, 'likes').populate('likes.product')
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: result.likes
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
   }
 }
 
