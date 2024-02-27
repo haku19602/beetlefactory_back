@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { create, login, logout, extend, getProfile, editCart, getCart, edit, getAll, remove, editLikes } from '../controllers/users.js'
+import { create, login, logout, extend, getProfile, editCart, getCart, edit, getAll, remove, editLikes, getLikes } from '../controllers/users.js'
 import * as auth from '../middlewares/auth.js'
 import upload from '../middlewares/upload.js'
 import admin from '../middlewares/admin.js'
@@ -19,5 +19,6 @@ router.patch('/likes', auth.jwt, editLikes) // 修改喜好清單
 router.patch('/:id', auth.jwt, admin, upload, edit) // 管理者用編輯全部
 // router.patch('/avatar', auth.jwt, upload, avatar) // 換大頭貼?
 router.delete('/:id', auth.jwt, admin, remove) // 管理者用刪除
+router.get('/likes', auth.jwt, getLikes) // 取得喜好清單
 
 export default router
