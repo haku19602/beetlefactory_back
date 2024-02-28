@@ -155,7 +155,7 @@ export const getId = async (req, res) => {
   try {
     if (!validator.isMongoId(req.params.id)) throw new Error('ID')
 
-    const result = await orders.findById(req.params.id).populate('user', 'account avatar').populate('cart.product')
+    const result = await orders.findById(req.params.id).populate('user', 'account').populate('cart.product')
     res.status(StatusCodes.OK).json({
       success: true,
       message: '',
