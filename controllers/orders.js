@@ -212,3 +212,24 @@ export const update = async (req, res) => {
     }
   }
 }
+
+// ===== 取得未付款、未出貨訂單數量
+export const getUnpaidUnshipped = async (req, res) => {
+  try {
+    const unpaid = await orders.countDocuments({ paid: 'false' })
+    const unshipped = await orders.countDocuments({ shipped: 'false' })
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: {
+        unpaid,
+        unshipped
+      }
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '未知錯誤'
+    })
+  }
+}
