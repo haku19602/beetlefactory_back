@@ -88,6 +88,18 @@ const schema = new Schema(
     },
     likes: {
       type: [likesSchema]
+    },
+    name: {
+      type: String,
+      default: ''
+    },
+    phone: {
+      type: String,
+      default: ''
+    },
+    address: {
+      type: String,
+      default: ''
     }
   },
   {

@@ -63,7 +63,10 @@ export const login = async (req, res) => {
         // 新寫法 -> 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
         avatar: req.user.avatar,
-        likes: req.user.likes.map((item) => item.product) // 只回傳商品 _id 組成的陣列，不要包物件跟欄位 _id
+        likes: req.user.likes.map((item) => item.product), // 只回傳商品 _id 組成的陣列，不要包物件跟欄位 _id
+        name: req.user.name,
+        phone: req.user.phone,
+        address: req.user.address
       }
     })
   } catch (error) {
@@ -136,7 +139,10 @@ export const getProfile = (req, res) => {
         // 新寫法 => 先在 users.js 的 models 寫一個 mongoose 的虛擬欄位
         cart: req.user.cartQuantity,
         avatar: req.user.avatar,
-        likes: req.user.likes.map((item) => item.product) // 只回傳商品 ID 組成的陣列，不要包物件跟欄位 _id
+        likes: req.user.likes.map((item) => item.product), // 只回傳商品 ID 組成的陣列，不要包物件跟欄位 _id
+        name: req.user.name,
+        phone: req.user.phone,
+        address: req.user.address
       }
     })
   } catch (error) {
@@ -306,12 +312,12 @@ export const getAll = async (req, res) => {
   }
 }
 
-// ===== 編輯使用者
+// ===== 編輯使用者 - 管理員用
 export const edit = async (req, res) => {
   try {
     if (!validator.isMongoId(req.params.id)) throw new Error('ID')
 
-    // 1. 先把圖片路徑放進 req.body.image
+    // 1. 先把圖片路徑放進 req.body.avatar
     // 編輯時前端不一定會傳圖片，req.file 是 undefined，undefined 沒有 .path 所以要用 ?. 避免錯誤
     req.body.avatar = req.file?.path
     // 2. 再丟 req.body 更新資料，如果沒有圖片 req.file?.path 就是 undefined，不會更新圖片
@@ -346,6 +352,79 @@ export const edit = async (req, res) => {
         message: '未知錯誤'
       })
     }
+  }
+}
+
+// ===== 使用者編輯自己
+export const editSelf = async (req, res) => {
+  try {
+    if (!validator.isMongoId(req.user._id.toString())) throw new Error('ID')
+
+    await users.findByIdAndUpdate(req.user._id, req.body, { runValidators: true }).orFail(new Error('NOT FOUND')) // orFail() 如果沒有找到資料，就自動丟出錯誤
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: ''
+    })
+  } catch (error) {
+    console.log(error)
+    if (error.name === 'CastError' || error.message === 'ID') {
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: '請求使用者 ID 格式錯誤 user controller editSelf'
+      })
+    } else if (error.message === 'NOT FOUND') {
+      res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: '查無使用者'
+      })
+    } else if (error.name === 'ValidationError') {
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message
+      })
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: '未知錯誤'
+      })
+    }
+  }
+}
+
+// ===== 換大頭貼
+export const avatar = async (req, res) => {
+  try {
+    /*
+    console.log(req.file) -> 得到以下物件
+    {
+      fieldname: 'image',
+      originalname: '0104.jpg',
+      encoding: '7bit',
+      mimetype: 'image/jpeg',
+      path: 'https://res.cloudinary.com/xxx.jpg',
+      size: 46736,
+      filename: 'wfsjhnj7mhucazq9rcpj'
+    }
+    */
+    // 把大題貼改成這次檔案上傳的路徑
+    req.user.avatar = req.file.path // 多檔上傳 req.files
+    // 保存
+    await req.user.save()
+    // 回覆成功
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: '',
+      result: req.user.avatar
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: '伺服器錯誤'
+    })
   }
 }
 
@@ -458,37 +537,3 @@ export const getLikes = async (req, res) => {
     })
   }
 }
-
-// ===== 換大頭貼
-// export const avatar = async (req, res) => {
-//   try {
-//     /*
-//     console.log(req.file) -> 得到以下物件
-//     {
-//       fieldname: 'image',
-//       originalname: '0104.jpg',
-//       encoding: '7bit',
-//       mimetype: 'image/jpeg',
-//       path: 'https://res.cloudinary.com/xxx.jpg',
-//       size: 46736,
-//       filename: 'wfsjhnj7mhucazq9rcpj'
-//     }
-//     */
-//     // 把大題貼改成這次檔案上傳的路徑
-//     req.user.avatar = req.file.path // 多檔上傳 req.files
-//     // 保存
-//     await req.user.save()
-//     // 回覆成功
-//     res.status(StatusCodes.OK).json({
-//       success: true,
-//       message: '',
-//       result: req.user.avatar
-//     })
-//   } catch (error) {
-//     console.log(error)
-//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//       success: false,
-//       message: '伺服器錯誤'
-//     })
-//   }
-// }
